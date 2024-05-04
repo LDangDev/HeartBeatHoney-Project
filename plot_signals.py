@@ -4,6 +4,20 @@ from piotimer import Piotimer
 from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
 import utime
+import urequests as requests
+import ujson
+import network
+
+SSID = "Koti_A021"
+PASSWORD = "7DUBFF4ALEBMM"
+
+# Kubios Cloud
+APIKEY = "pbZRUi49X48I56oL1Lq8y8NDjq6rPfzX3AQeNo3a"
+CLIENT_ID = "3pjgjdmamlj759te85icf0lucv"
+CLIENT_SECRET = "111fqsli1eo7mejcrlffbklvftcnfl4keoadrdv1o45vt9pndlef"
+LOGIN_URL = "https://kubioscloud.auth.eu-west-1.amazoncognito.com/login"
+TOKEN_URL = "https://kubioscloud.auth.eu-west-1.amazoncognito.com/oauth2/token"
+REDIRECT_URI = "https://analysis.kubioscloud.com/v1/portal/login"
 
 
 # Initialize I2C interface and OLED display
@@ -13,7 +27,7 @@ oled_height = 64
 oled = SSD1306_I2C(oled_width, oled_height, i2c)
 
 
-
+######################################################################
 
 class pulseSensor:
     def __init__(self, pin_adc, sample_rate) -> None:
@@ -23,21 +37,71 @@ class pulseSensor:
 
     def handler(self, tid):
         self.fifo.put(self.av.read_u16())
+        
+######################################################################
 
-def calculate_SDNN(signal_arr, mean_ppi_value):
+def calculate_SDNN(ppi_arr, mean_ppi_value):
     sum = 0
-    for signal in signal_arr:
-        sum += (signal - mean_ppi_value) ** 2
-    SDNN_value = (sum / len(signal_arr) - 1) ** (1/2)
-    return int(SDNN_value)
+    for ppi in ppi_arr:
+        sum += (ppi - mean_ppi_value) ** 2
+    SDNN_value = (sum / len(ppi_arr) - 1) ** (1/2)
+    return SDNN_value
 
 def calculate_mean_PPI(ppi_array):
     sum = 0
     for ppi in ppi_array:
         sum += ppi
-    return int(sum / len(ppi_array))
+    return sum / len(ppi_array)
+
+def calculate_RMSSD(ppi_array):
+    sum = 0
+    for i in range(len(ppi_array) - 1):
+        sum += (ppi_array[i + 1] - ppi_array[i]) ** 2
+    return (sum / (len(ppi_array) - 1)) ** (1/2)
+
+def connect_wlan():
+    # Connect to WLAN
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(SSID, PASSWORD)
+
+    # Try to connect to the network once/s
+    while not wlan.isconnected():
+        print("Connecting...")
+        utime.sleep(1)
+    
+    print("wlan connect succesfully")
+
+def get_response_from_kubios(intervals):
+    response = requests.post(
+    url = TOKEN_URL,
+    data = 'grant_type=client_credentials&client_id={}'.format(CLIENT_ID),
+    headers = {'Content-Type':'application/x-www-form-urlencoded'},
+    auth = (CLIENT_ID, CLIENT_SECRET))
+    response = response.json() #Parse JSON response into a python dictionary
+    access_token = response["access_token"] #Parse access token
+
+    #Create the dataset dictionary HERE
+
+    dataset = {
+    "type": "RRI",
+    "data": intervals,
+    "analysis": {"type": "readiness"}
+    }
+
+    # Make the readiness analysis with the given data
+    response = requests.post(
+    url = "https://analysis.kubioscloud.com/v2/analytics/analyze",
+    headers = { "Authorization": "Bearer {}".format(access_token),
+    "X-Api-Key": APIKEY},
+    json = dataset)
+    response = response.json()
+
+    return response
 
 
+
+######################################################################
 
 def plotting_signal(rot_en, pulse, current_index):
 
@@ -58,9 +122,12 @@ def plotting_signal(rot_en, pulse, current_index):
     max_value = 0
     scaled_value = 0
 
+    history = ['2024.5.5    1:35']
+
 
     hr_array = []
     ppi_array = []
+    ppi_mean = 0
     # Graph settings
     graph_start = 0
     last_y = oled_height // 2  # Start in the middle of the screen
@@ -120,7 +187,7 @@ def plotting_signal(rot_en, pulse, current_index):
     
         # check if time is more than 10s
         # if elapsed_time > 40 or rot_en.fifo.get() == 0:
-        if elapsed_time > 10:
+        if elapsed_time > 10 and current_index == 0:
             
             hr_array.sort()
             mean = len(hr_array) // 2
@@ -132,23 +199,90 @@ def plotting_signal(rot_en, pulse, current_index):
             oled.text("to menu ...", 0, 18, 1)
             oled.show()
             
+            # stop reading data from pulse
+            tmr.deinit()
             
             while True:
                 if rot_en.fifo.has_data():
                     e = rot_en.fifo.get()
                     if e == 0:
-                        # stop adding data to fifo and back to main menu
-                        tmr.deinit()
                         break
+            # back to main menu
+            break
+        
+        elif elapsed_time > 10 and current_index == 1:
+            hr_array.sort()
+            mean = len(hr_array) // 2
+            hr_mean = hr_array[mean]
+            
+            ppi_mean = calculate_mean_PPI(ppi_array)
+            sdnn = calculate_SDNN(ppi_array, ppi_mean)
+            rmssd = calculate_RMSSD(ppi_array)
+            
+            oled.fill(0)
+            oled.text(f"HR mean: {hr_mean}", 0, 0, 1)
+            oled.text(f"PPI mean: {ppi_mean}", 0, 8, 1)
+            oled.text(f"SDNN: {sdnn}", 0, 16, 1)
+            oled.text(f"RMSSD: {rmssd}", 0, 24, 1)
+            oled.text("Press button to back ", 0, 40, 1)
+            oled.text("to menu ...", 0, 48, 1)
+            oled.show()
+            
+            # stop reading data from pulse
+            tmr.deinit()
+            
+            while True:
+                if rot_en.fifo.has_data():
+                    e = rot_en.fifo.get()
+                    if e == 0:
+                        break
+            # back to main menu
             break
 
+        elif elapsed_time > 30 and current_index == 2:
+            # stop reading data from pulse
+            tmr.deinit()
+            
+            connect_wlan()
+            
+            
+            while True:
+                oled.fill(0)
+                oled.text("Sending data to ", 0, 0, 1)
+                oled.text("Kubios...", 0, 8, 1)
+                oled.show()
 
+                kubios_data = get_response_from_kubios(ppi_array)
+                
+                if kubios_data["status"] == 'ok':
+                    oled.fill(0)
+                    oled.text(f"PPI mean:{kubios_data["analysis"]["mean_rr_ms"]}", 0, 0, 1)
+                    oled.text(f"RMSSD:{kubios_data["analysis"]["rmssd_ms"]}", 0, 12, 1)
+                    oled.text(f"SDNN:{kubios_data["analysis"]["sdnn_ms"]}", 0, 24, 1)
+                    oled.text(f"SNS:{kubios_data["analysis"]["sns_index"]}", 0, 36, 1)
+                    oled.text(f"PNS:{kubios_data["analysis"]["pns_index"]}", 0, 48, 1)
+                    oled.show()
+                    break
+                else:
+                    oled.fill(0)
+                    oled.text("Error.... try again", 0, 0, 1)
+                    oled.show()
+                    break
+            
+            while True:
+                if rot_en.fifo.has_data():
+                    e = rot_en.fifo.get()
+                    if e == 0:
+                        break
+            # back to main menu
+            break
 
         elif rot_en.fifo.has_data():
                 e =  rot_en.fifo.get()
                 if e == 0:
                     # stop adding data to fifo and back to main menu
                     tmr.deinit()
+                    #back to main menu
                     break
         else:
 
@@ -176,6 +310,8 @@ def plotting_signal(rot_en, pulse, current_index):
             oled.show()
 
 # plotting_signal()
+
+
 
 
 
