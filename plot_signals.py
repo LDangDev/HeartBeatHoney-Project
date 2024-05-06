@@ -19,6 +19,15 @@ LOGIN_URL = "https://kubioscloud.auth.eu-west-1.amazoncognito.com/login"
 TOKEN_URL = "https://kubioscloud.auth.eu-west-1.amazoncognito.com/oauth2/token"
 REDIRECT_URI = "https://analysis.kubioscloud.com/v1/portal/login"
 
+######################################################################
+
+# History
+
+# HISTORY = {'item 1': {'hr mean': 74, 'ppi mean': 500}, 'item 2': {'hr mean': 89, 'ppi mean': 477}}
+HISTORY = {}
+HISTORY_OPTION = ["EXIT"]
+index = 0
+
 
 # Initialize I2C interface and OLED display
 i2c = I2C(1, scl=Pin(15), sda=Pin(14), freq=400000)
@@ -67,10 +76,16 @@ def connect_wlan():
 
     # Try to connect to the network once/s
     while not wlan.isconnected():
-        print("Connecting...")
+        oled.fill(0)
+        oled.text("Connecting... ", 0, 10, 1)
+        oled.show()
         utime.sleep(1)
     
-    print("wlan connect succesfully")
+    oled.fill(0)
+    oled.text("wlan connect", 0, 10, 1)
+    oled.text("succesfully", 0, 22, 1)
+    oled.show()
+    utime.sleep(2)
 
 def get_response_from_kubios(intervals):
     response = requests.post(
@@ -99,7 +114,39 @@ def get_response_from_kubios(intervals):
 
     return response
 
+def create_history(hr_mean, ppi_mean=0, rmssd=0, sdnn=0, sns=0, pns=0, method=''):
+    global index
+    # Get current time in seconds since the Epoch
+    current_time = utime.time()
 
+
+    # Convert to a struct_time
+    time_struct = utime.gmtime(current_time)
+    year, month, day, hour, minutes, seconds, week_day, day_of_year  = time_struct
+    #print(year, month, day, hour, minutes)
+    date_tuple = (day, month, year)
+    time_tuple = (hour, minutes)
+
+    # Convert each element to string before join
+    date_created = ".".join(map(str, date_tuple)) 
+#     print(date_created)
+
+    time_created = ":".join(map(str, time_tuple))
+#     print(time_created)
+    
+    HISTORY[f"item{len(HISTORY) + 1}"] = {
+        "date_create": date_created,
+        "time_create": time_created,
+        "method": method,
+        "hr_mean": hr_mean,
+        "ppi_mean": ppi_mean,
+        "rmssd": rmssd,
+        "sdnn": sdnn,
+        "sns": sns,
+        "pns": pns
+    }
+    HISTORY_OPTION.append(f"Measurement{index + 1}")
+    index += 1
 
 ######################################################################
 
@@ -122,7 +169,6 @@ def plotting_signal(rot_en, pulse, current_index):
     max_value = 0
     scaled_value = 0
 
-    history = ['2024.5.5    1:35']
 
 
     hr_array = []
@@ -170,7 +216,7 @@ def plotting_signal(rot_en, pulse, current_index):
                         if ppi_ms != 0:
                             hr = round(60000 / ppi_ms)
                             if hr >= 40 and hr <= 240:
-                                print(f"heart rate: {hr}")
+                                #print(f"heart rate: {hr}")
                                 hr_array.append(hr)
                                 ppi_array.append(ppi_ms)
                         peak_indexes.pop(0)
@@ -192,7 +238,8 @@ def plotting_signal(rot_en, pulse, current_index):
             hr_array.sort()
             mean = len(hr_array) // 2
             hr_mean = hr_array[mean]
-            
+
+            create_history(hr_mean)
             oled.fill(0)
             oled.text(f"HR mean: {hr_mean}", 0, 0, 1)
             oled.text("Press button to back ", 0, 10, 1)
@@ -219,6 +266,8 @@ def plotting_signal(rot_en, pulse, current_index):
             sdnn = calculate_SDNN(ppi_array, ppi_mean)
             rmssd = calculate_RMSSD(ppi_array)
             
+            
+            create_history(hr_mean, ppi_mean=ppi_mean, sdnn=sdnn, rmssd=rmssd)
             oled.fill(0)
             oled.text(f"HR mean: {hr_mean}", 0, 0, 1)
             oled.text(f"PPI mean: {ppi_mean}", 0, 8, 1)
@@ -254,13 +303,24 @@ def plotting_signal(rot_en, pulse, current_index):
 
                 kubios_data = get_response_from_kubios(ppi_array)
                 
+          
                 if kubios_data["status"] == 'ok':
                     oled.fill(0)
-                    oled.text(f"PPI mean:{kubios_data["analysis"]["mean_rr_ms"]}", 0, 0, 1)
-                    oled.text(f"RMSSD:{kubios_data["analysis"]["rmssd_ms"]}", 0, 12, 1)
-                    oled.text(f"SDNN:{kubios_data["analysis"]["sdnn_ms"]}", 0, 24, 1)
-                    oled.text(f"SNS:{kubios_data["analysis"]["sns_index"]}", 0, 36, 1)
-                    oled.text(f"PNS:{kubios_data["analysis"]["pns_index"]}", 0, 48, 1)
+                    oled.text("Succesfully! ", 0, 0, 1)
+                    oled.text("Getting data ", 0, 12, 1)
+                    oled.text("from Kubios...", 0, 24, 1)
+                    oled.show()
+                    
+                    utime.sleep(3)
+                    
+                    
+                    oled.fill(0)
+                    oled.text(f"HR mean:{kubios_data["analysis"]["mean_hr_bpm"]}", 0, 0, 1)
+                    oled.text(f"PPI mean:{kubios_data["analysis"]["mean_rr_ms"]}", 0, 10, 1)
+                    oled.text(f"RMSSD:{kubios_data["analysis"]["rmssd_ms"]}", 0, 20, 1)
+                    oled.text(f"SDNN:{kubios_data["analysis"]["sdnn_ms"]}", 0, 30, 1)
+                    oled.text(f"SNS:{kubios_data["analysis"]["sns_index"]}", 0, 40, 1)
+                    oled.text(f"PNS:{kubios_data["analysis"]["pns_index"]}", 0, 50, 1)
                     oled.show()
                     break
                 else:
@@ -268,6 +328,8 @@ def plotting_signal(rot_en, pulse, current_index):
                     oled.text("Error.... try again", 0, 0, 1)
                     oled.show()
                     break
+
+            create_history(hr_mean=kubios_data["analysis"]["mean_hr_bpm"], ppi_mean=kubios_data["analysis"]["mean_rr_ms"], sdnn=kubios_data["analysis"]["sdnn_ms"], rmssd=kubios_data["analysis"]["rmssd_ms"], sns=kubios_data["analysis"]["sns_index"], pns=kubios_data["analysis"]["pns_index"])
             
             while True:
                 if rot_en.fifo.has_data():
@@ -299,7 +361,7 @@ def plotting_signal(rot_en, pulse, current_index):
             # print(scaled_value)
             
 
-            oled.line(graph_start, 53 - last_y, graph_start, 53 - scaled_value, 1)
+            oled.line(graph_start, 53 - last_y, graph_start + 1, 53 - scaled_value, 1)
             last_y = scaled_value
             graph_start += 1
 
@@ -310,6 +372,9 @@ def plotting_signal(rot_en, pulse, current_index):
             oled.show()
 
 # plotting_signal()
+
+
+
 
 
 
