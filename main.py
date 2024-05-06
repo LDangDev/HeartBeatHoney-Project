@@ -2,9 +2,8 @@ from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
 from fifo import Fifo
 import framebuf
-from plot_signals import plotting_signal, HISTORY, HISTORY_OPTION
+from plot_signals import plotting_signal, align_center, HISTORY, HISTORY_OPTION
 from icons import *
-
 import time
 import utime
 
@@ -75,24 +74,30 @@ def display_menu(images, menu_options, selected_menu_index, on_states):
 
     for i, option in enumerate(menu_options):
         if i == selected_menu_index:
-            x = int((128 - (len(option * 8))) / 2)
+            x = align_center(len(option))
             icon = framebuf.FrameBuffer(images[selected_menu_index], 32, 32, framebuf.MONO_VLSB)
             oled.blit(icon, 48, 16)
             oled.text(option, x, 56, 1)
-            oled.text(on_states[selected_menu_index], 36, 0, 1)
+            oled.text(on_states[selected_menu_index], 28, 0, 1)
             oled.show()
 
 def display_history_options(HISTORY_OPTION, selected_history_index):
+    
     oled.fill(0)
-
     for i in range(len(HISTORY_OPTION)) :
-        if i == selected_history_index:
+        if i == selected_history_index and i == 0:
             # Add 2 pixel gap between lines
             oled.fill_rect(0, i * 10, 127, 8, 1)
             oled.text(f"{HISTORY_OPTION[selected_history_index]}", 0, i * 10, 0)
-            
+
+        elif i == selected_history_index:
+            oled.fill_rect(0, i * 10, 127, 8, 1)
+            oled.text(f"{HISTORY_OPTION[selected_history_index]}", 16, i * 10, 0)
         else:
-            oled.text(f"{HISTORY_OPTION[i]}", 0, i * 10, 1)
+            if i == 0:
+                oled.text(f"{HISTORY_OPTION[i]}", 0, i * 10, 1)
+            else:
+                oled.text(f"{HISTORY_OPTION[i]}", 16, i * 10, 1)	
         oled.show()
 
 
@@ -118,10 +123,10 @@ def main():
 #     home_menu()
 
 
-    images = [heart_rate, analysis, cloud, history]
-    menu_options = ["MEASURE HR", "BASIC ANALYSIS", "KUBIOS", "HISTORY"]
+    images = [heart_rate, analysis, cloud, history, exit_icon]
+    menu_options = ["MEASURE HR", "BASIC ANALYSIS", "KUBIOS", "HISTORY", "EXIT"]
 
-    on_states = ["* . . .", ". * . .", ". . * .", ". . . *"]
+    on_states = ["* . . . .", ". * . . .", ". . * . .", ". . . * .", ". . . . *"]
     selected_menu_index = 0
     selected_history_index = 0
     pre_state_rot = 0
@@ -137,6 +142,7 @@ def main():
             elif event == -1:
                 selected_menu_index = (selected_menu_index - 1) % len(menu_options)
             else:
+                # Access history
                 if selected_menu_index == 3:
                     # print(HISTORY)
                     if HISTORY != {}:
@@ -152,6 +158,7 @@ def main():
                                 # print(f"rot value: {rot_event}")
                                 if pre_state_rot == rot_event:
                                     is_exit = True
+                                    
                                 if rot_event == 1:
                                     selected_history_index = (selected_history_index + 1) % len(HISTORY_OPTION)
                                 elif rot_event == -1:
@@ -161,7 +168,7 @@ def main():
                                     
                                     while True:
                                         oled.fill(0)
-                                        oled.text(f"{HISTORY[item_key]['date_create']}   { HISTORY[item_key]['time_create']}", 8, 0)
+                                        oled.text(f"{HISTORY[item_key]['date_create']} { HISTORY[item_key]['time_create']}", 8, 0)
                                         oled.text(f"MEAN HR:{HISTORY[item_key]['hr_mean']}", 0, 8)
                                         oled.text(f"MEAN PPI:{HISTORY[item_key]['ppi_mean']}", 0, 18)
                                         oled.text(f"RMSSD:{HISTORY[item_key]['rmssd']}", 0, 28)
@@ -193,6 +200,12 @@ def main():
                                 # print(e)
                                 if e == 0:
                                     break
+                # exit program               
+                elif selected_menu_index == 4:
+                    print("test")
+                    oled.fill(0)
+                    oled.show()
+                    machine.reset()
                 else:
                     while True:
                         # print(event)

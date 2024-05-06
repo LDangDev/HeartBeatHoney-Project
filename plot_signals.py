@@ -5,7 +5,6 @@ from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
 import utime
 import urequests as requests
-import ujson
 import network
 
 SSID = "Koti_A021"
@@ -25,7 +24,7 @@ REDIRECT_URI = "https://analysis.kubioscloud.com/v1/portal/login"
 
 # HISTORY = {'item 1': {'hr mean': 74, 'ppi mean': 500}, 'item 2': {'hr mean': 89, 'ppi mean': 477}}
 HISTORY = {}
-HISTORY_OPTION = ["EXIT"]
+HISTORY_OPTION = ["Back to menu"]
 index = 0
 
 
@@ -38,14 +37,7 @@ oled = SSD1306_I2C(oled_width, oled_height, i2c)
 
 ######################################################################
 
-class pulseSensor:
-    def __init__(self, pin_adc, sample_rate) -> None:
-        self.av = ADC(pin_adc)
-        self.fifo = Fifo(500)
-        self.sample_rate = sample_rate
 
-    def handler(self, tid):
-        self.fifo.put(self.av.read_u16())
         
 ######################################################################
 
@@ -77,7 +69,7 @@ def connect_wlan():
     # Try to connect to the network once/s
     while not wlan.isconnected():
         oled.fill(0)
-        oled.text("Connecting... ", 0, 10, 1)
+        oled.text("Connecting wlan... ", 0, 10, 1)
         oled.show()
         utime.sleep(1)
     
@@ -147,6 +139,9 @@ def create_history(hr_mean, ppi_mean=0, rmssd=0, sdnn=0, sns=0, pns=0, method=''
     }
     HISTORY_OPTION.append(f"Measurement{index + 1}")
     index += 1
+    
+def align_center(length):
+    return int((128 - length * 8) / 2)
 
 ######################################################################
 
@@ -192,7 +187,7 @@ def plotting_signal(rot_en, pulse, current_index):
             threshold = (((max_value - min_value) / 2) + min_value) * 1.05
             # when sample greater than threshold start checking the peak
             if value > threshold:
-                # 
+                # 2 pointers tmp_peak and peak point at the first peak
                 if pre_value > value and first_time_peak:
                     tmp_peak = pre_value
                     first_time_peak = False
@@ -200,10 +195,12 @@ def plotting_signal(rot_en, pulse, current_index):
                     # print("first")
                 elif pre_value > value:
                     tmp_peak = pre_value
+                    # check if current peak is greater than previous peak
                     if tmp_peak > peak:
                         peak = tmp_peak
                         # peak_index = index
                         # print(f"peak index: {peak_index}")
+            # when sample is under threshold the latest peak is the max peak
             else:
                 if tmp_peak != 0:
                     peak_indexes.append(index)
@@ -298,7 +295,7 @@ def plotting_signal(rot_en, pulse, current_index):
             while True:
                 oled.fill(0)
                 oled.text("Sending data to ", 0, 0, 1)
-                oled.text("Kubios...", 0, 8, 1)
+                oled.text("Kubios...", 0, 12, 1)
                 oled.show()
 
                 kubios_data = get_response_from_kubios(ppi_array)
@@ -325,7 +322,8 @@ def plotting_signal(rot_en, pulse, current_index):
                     break
                 else:
                     oled.fill(0)
-                    oled.text("Error.... try again", 0, 0, 1)
+                    oled.text("Error....", 0, 0, 1)
+                    oled.text("try again", 0, 10, 1)
                     oled.show()
                     break
 
@@ -372,6 +370,7 @@ def plotting_signal(rot_en, pulse, current_index):
             oled.show()
 
 # plotting_signal()
+
 
 
 
