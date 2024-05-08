@@ -22,11 +22,6 @@ oled = SSD1306_I2C(oled_width, oled_height, i2c)
 
 
 
-
-
-
-
-
 ######################################################################
 
 
@@ -56,12 +51,12 @@ class Encoder:
 
 class pulseSensor:
     def __init__(self, pin_adc, sample_rate) -> None:
-        self.av = ADC(pin_adc)
+        self.adc = ADC(pin_adc)
         self.fifo = Fifo(500)
         self.sample_rate = sample_rate
 
     def handler(self, tid):
-        self.fifo.put(self.av.read_u16())
+        self.fifo.put(self.adc.read_u16())
 
 
 ######################################################################
@@ -97,9 +92,8 @@ def display_history_options(HISTORY_OPTION, selected_history_index):
             if i == 0:
                 oled.text(f"{HISTORY_OPTION[i]}", 0, i * 10, 1)
             else:
-                oled.text(f"{HISTORY_OPTION[i]}", 16, i * 10, 1)	
-        oled.show()
-
+                oled.text(f"{HISTORY_OPTION[i]}", 16, i * 10, 1)
+    oled.show()
 
 def home_menu():
     oled.fill(0)
@@ -120,13 +114,13 @@ pulse = pulseSensor(26, 250)
 
 def main():
     # show welcome text
-#     home_menu()
+    #home_menu()
 
 
     images = [heart_rate, analysis, cloud, history, exit_icon]
     menu_options = ["MEASURE HR", "BASIC ANALYSIS", "KUBIOS", "HISTORY", "EXIT"]
 
-    on_states = ["* . . . .", ". * . . .", ". . * . .", ". . . * .", ". . . . *"]
+    on_states = ["o . . . .", ". o . . .", ". . o . .", ". . . o .", ". . . . o"]
     selected_menu_index = 0
     selected_history_index = 0
     pre_state_rot = 0
@@ -145,7 +139,7 @@ def main():
                 # Access history
                 if selected_menu_index == 3:
                     # print(HISTORY)
-                    if HISTORY != {}:
+                    if HISTORY:
                         display_history_options(HISTORY_OPTION, selected_history_index)
                         # print(f"rot_event: {event}")
                         while True:
@@ -168,7 +162,7 @@ def main():
                                     
                                     while True:
                                         oled.fill(0)
-                                        oled.text(f"{HISTORY[item_key]['date_create']} { HISTORY[item_key]['time_create']}", 8, 0)
+                                        oled.text(f"{HISTORY[item_key]['date_create']} { HISTORY[item_key]['time_create']}", 8, 0, 1)
                                         oled.text(f"MEAN HR:{HISTORY[item_key]['hr_mean']}", 0, 8)
                                         oled.text(f"MEAN PPI:{HISTORY[item_key]['ppi_mean']}", 0, 18)
                                         oled.text(f"RMSSD:{HISTORY[item_key]['rmssd']}", 0, 28)
@@ -190,10 +184,10 @@ def main():
                     else:
                         while True:
                             oled.fill(0)
-                            oled.text(f"NO HISTORY!!!", 12, 0, 1)
-                            oled.text(f"Press button", 16, 20, 1)
-                            oled.text(f"to back to", 16, 30, 1)
-                            oled.text(f"main menu", 16, 40, 1)
+                            oled.text(f"!NO HISTORY!", align_center(len("!NO HISTORY!")), 0, 1)
+                            oled.text(f"Press button", align_center(len("Press button")), 20, 1)
+                            oled.text(f"to back to", align_center(len("to back to")), 30, 1)
+                            oled.text(f"main menu", align_center(len("main menu")), 40, 1)
                             oled.show()
                             if rot.fifo.has_data():
                                 e = rot.fifo.get()
@@ -205,7 +199,7 @@ def main():
                     print("test")
                     oled.fill(0)
                     oled.show()
-                    machine.reset()
+                    machine.soft_reset()
                 else:
                     while True:
                         # print(event)
@@ -216,9 +210,3 @@ def main():
             
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
