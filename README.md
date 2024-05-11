@@ -1,8 +1,4 @@
-# MicroPython libraries for the first year hardware project
 
-This is an example project that can be used to install MicroPython libraries that are needed for
-the first year hardware project. You can also use this as a template for your own 
-project.
 
 # To setup your Pico
 
@@ -23,7 +19,7 @@ When the prerequisites are met then you can install the project and the librarie
 
 Start a terminal, go to (use <kbd>cd</kbd> command) the directory where you want to copy the project to. Then run:
 
-<kbd>git clone --recurse-submodules https://gitlab.metropolia.fi/lansk/pico-test.git</kbd>
+<kbd>git clone --recurse-submodules https://github.com/LDangDev/HeartBeatHoney-Project.git</kbd>
 
 Go to the pico-test directory and run:
 
