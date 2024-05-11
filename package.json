@@ -1,11 +1,14 @@
 {
   "urls": [
-    ["filefifo.py", "http://localhost:8000/filefifo.py"],	
-    ["fifo.py", "http://localhost:8000/fifo.py"],
-    ["led.py", "http://localhost:8000/led.py"],
-    ["piotimer.py", "http://localhost:8000/piotimer.py"],
-    ["ssd1306.mpy", "http://localhost:8000/ssd1306.mpy"],
-    ["umqtt/simple.mpy", "http://localhost:8000/umqtt/simple.mpy"]
+    ["lib/filefifo.py", "http://localhost:8000/pico-lib/filefifo.py"],	
+    ["lib/fifo.py", "http://localhost:8000/pico-lib/fifo.py"],
+    ["lib/piotimer.py", "http://localhost:8000/pico-lib/piotimer.py"],
+    ["lib/led.py", "http://localhost:8000/pico-lib/led.py"],
+    ["lib/ssd1306.mpy", "http://localhost:8000/pico-lib/ssd1306.mpy"],
+    ["lib/umqtt/simple.mpy", "http://localhost:8000/pico-lib/umqtt/simple.mpy"],
+    ["icons.py", "http://localhost:8000/test.py"],
+    ["main.py", "http://localhost:8000/test.py"],
+    ["plot_signal.py", "http://localhost:8000/test.py"]
   ],
   "deps": [
   ],
