@@ -31,7 +31,7 @@ Run on Mac OS using command
 sh install.sh
 ```
 
-Also configure 
+Also configure in plot_signal.py
 
 ```
 SSID = "**********"
