@@ -6,9 +6,9 @@
     ["lib/led.py", "http://localhost:8000/pico-lib/led.py"],
     ["lib/ssd1306.mpy", "http://localhost:8000/pico-lib/ssd1306.mpy"],
     ["lib/umqtt/simple.mpy", "http://localhost:8000/pico-lib/umqtt/simple.mpy"],
-    ["icons.py", "http://localhost:8000/test.py"],
-    ["main.py", "http://localhost:8000/test.py"],
-    ["plot_signal.py", "http://localhost:8000/test.py"]
+    ["icons.py", "http://localhost:8000/icons.py"],
+    ["main.py", "http://localhost:8000/main.py"],
+    ["plot_signal.py", "http://localhost:8000/plot_signal.py"]
   ],
   "deps": [
   ],
