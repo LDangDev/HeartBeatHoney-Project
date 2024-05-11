@@ -27,6 +27,11 @@ Go to the pico-test directory and run:
 
 - <kbd>./install.sh</kbd> if you use Linux, OSX or GitBash
 
+# Usage
+Upload main.py, icons.py and plot_signal.py to your Raspberry Pi Pico and run the main.py file.
+
+Please configure 
+
 ## Pull submodule updates
 
 When a submodule is added a commit id is stored to the repository where the module is set up. 
