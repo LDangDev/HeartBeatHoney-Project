@@ -2,7 +2,7 @@ from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
 from fifo import Fifo
 import framebuf
-from plot_signals import plotting_signal, align_center, HISTORY, HISTORY_OPTION
+from plot_signal import plotting_signal, align_center, HISTORY, HISTORY_OPTION
 from icons import *
 import time
 import utime
