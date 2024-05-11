@@ -23,17 +23,15 @@ Start a terminal, go to (use <kbd>cd</kbd> command) the directory where you want
 git clone --recurse-submodules https://github.com/LDangDev/HeartBeatHoney-Project.git
 ```
 
-Go to the pico-test directory and run:
-
-- <kbd>.\install.cmd</kbd> if you use Windows PowerShell or cmd
-
-- <kbd>./install.sh</kbd> if you use Linux, OSX or GitBash
 
 # Usage
 
-Upload main.py, icons.py and plot_signal.py to your Raspberry Pi Pico and run the main.py file.
+Run on Mac OS using command
+```
+sh install.sh
+```
 
-Please configure 
+Also configure 
 
 ```
 SSID = "**********"
