@@ -19,7 +19,9 @@ When the prerequisites are met then you can install the project and the librarie
 
 Start a terminal, go to (use <kbd>cd</kbd> command) the directory where you want to copy the project to. Then run:
 
-<kbd>git clone --recurse-submodules https://github.com/LDangDev/HeartBeatHoney-Project.git</kbd>
+```
+git clone --recurse-submodules https://github.com/LDangDev/HeartBeatHoney-Project.git
+```
 
 Go to the pico-test directory and run:
 
